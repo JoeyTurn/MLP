@@ -5,7 +5,6 @@ import torch.multiprocessing as mp
 from backend.cli import parse_args, build_other_grabs
 
 from data.monomial import Monomial
-from data.data import polynomial_batch_fn
 from backend.job_iterator import main as run_job_iterator
 from backend.utils import ensure_torch, load_json
 

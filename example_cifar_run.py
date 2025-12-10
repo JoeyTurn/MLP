@@ -9,7 +9,7 @@ from data.data import polynomial_batch_fn
 from backend.job_iterator import main as run_job_iterator
 from backend.utils import ensure_torch, load_json
 
-from .ntk_coeffs import get_relu_level_coeff_fn
+from ntk_coeffs import get_relu_level_coeff_fn
 
 import os, sys
 from FileManager import FileManager
@@ -25,6 +25,13 @@ if __name__ == "__main__":
     args.N_TEST=1000
     args.NUM_TRIALS = 3
     args.N_TOT = args.N_TEST+args.N_TRAIN
+    args.CLASSES = [[0], [6]]
+    args.NUM_TRIALS = 2
+    args.N_SAMPLES = [1024]
+    args.GAMMA = [0.1, 1, 10]
+
+    iterators = [args.N_SAMPLES, range(args.NUM_TRIALS), args.GAMMA]
+    iterator_names = ["ntrain", "trial", "GAMMA"]
     
     datapath = os.getenv("DATASETPATH") #datapath = os.path.join(os.getenv(...))
     exptpath = os.getenv("EXPTPATH") #same here
@@ -41,17 +48,6 @@ if __name__ == "__main__":
     expt_fm = FileManager(expt_dir)
     print(f"Working in directory {expt_dir}.")
 
-    
-    if args.TARGET_MONOMIALS is not None:
-        args.TARGET_MONOMIALS = [Monomial(m) for m in args.TARGET_MONOMIALS]
-    elif args.target_monomials_path:
-        target_monomials_json = load_json(args.target_monomials_path)
-        args.TARGET_MONOMIALS = [Monomial(m) for m in target_monomials_json]
-    elif args.TARGET_MONOMIALS is None:
-        args.TARGET_MONOMIALS = [Monomial({10: 1}), Monomial({190:1}), Monomial({0:2}), Monomial({2:1, 3:1}), Monomial({15:1, 20:1}), Monomial({0:3}),]
-        
-    if args.datasethps_path:
-        args.datasethps = load_json(args.datasethps_path)
 
     from ImageData import ImageData
     PIXEL_NORMALIZED =  False # Don't normalize pixels, normalize samples
@@ -81,14 +77,8 @@ if __name__ == "__main__":
     U, lambdas, Vt = torch.linalg.svd(X_full, full_matrices=False)
     dim = X_full.shape[1]
 
-    ## --- Target function defs ---
-    if args.TARGET_FUNCTION_TYPE == "monomial":
-        target_monomials = args.TARGET_MONOMIALS
-        targets = target_monomials
-        bfn_config = dict(lambdas=lambdas, Vt=Vt, data_eigvals=data_eigvals, N=args.N_TOT)
-    
-
-    batch_function = lambda n, X, y, gen, target_monomial: polynomial_batch_fn(**bfn_config, monomials=target_monomial, bsz=n, gen=gen, X=X, y=y)
+    bfn_config = dict(X_full = X_full, y_full = y_full, bfn_name="general_batch_fn")
+    del X_full, y_full   
 
     global_config = dict(DEPTH=args.DEPTH, WIDTH=args.WIDTH, LR=args.LR, GAMMA=args.GAMMA,
         EMA_SMOOTHER=args.EMA_SMOOTHER, MAX_ITER=args.MAX_ITER,
@@ -103,13 +93,8 @@ if __name__ == "__main__":
     global_config.update({"otherreturns": grabs})
     
     mp.set_start_method("spawn", force=True)
-    sample_sizes = [100, 500, 1000]
-    trials = [0, 1, 2]
     
-    iterators = [args.N_SAMPLES, args.NUM_TRIALS, args.TARGET_MONOMIALS]
-    iterator_names = ["ntrain", "trial", "target_monomial"]
-    
-
-    result = run_job_iterator(iterators, iterator_names, global_config, bfn=batch_function)
+    result = run_job_iterator(iterators, iterator_names, global_config, bfn_config=bfn_config)
+    print(f"Results saved to {expt_dir}")
     expt_fm.save(result, "result.pickle")
     torch.cuda.empty_cache()

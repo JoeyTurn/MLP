@@ -1,6 +1,6 @@
-from .utils import ensure_torch
+from backend.utils import ensure_torch
 import torch
-from data.data import get_new_polynomial_data
+from .data import get_new_polynomial_data
 
 def polynomial_batch_fn(lambdas, Vt, monomials, bsz, data_eigvals, N=10,
                   X=None, y=None, data_creation_fn=get_new_polynomial_data, gen=None):
@@ -20,6 +20,22 @@ def polynomial_batch_fn(lambdas, Vt, monomials, bsz, data_eigvals, N=10,
     
     return batch_fn
 
+def general_batch_fn(X_total, y_total, X=None, y=None, bsz=128,
+                     gen=None, **kwargs):
+    def batch_fn(step: int, X=X, y=y):
+        if (X is not None) and (y is not None):
+            X = ensure_torch(X)
+            y = ensure_torch(y)
+            return X, y
+        with torch.no_grad():
+            N_total = X_total.shape[0]
+            indices = torch.randint(0, N_total, (bsz,), generator=gen)
+            X_batch = ensure_torch(X_total[indices])
+            y_batch = ensure_torch(y_total[indices])
+            return X_batch, y_batch
+    return batch_fn
+
 BATCH_FNS = {
     "polynomial_batch_fn": polynomial_batch_fn,
+    "general_batch_fn": general_batch_fn,
 }

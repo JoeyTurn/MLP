@@ -167,7 +167,7 @@ def get_new_polynomial_data(lambdas, Vt, monomials, dim, N, data_eigvals, N_orig
     return X_new, y_new
 
 
-def polynomial_batch_fn(lambdas, Vt, monomials, bsz, data_eigvals, N=10,
+def polynomial_batch_fn(lambdas, Vt, monomials, bsz, data_eigvals, N,
                   X=None, y=None, data_creation_fn=get_new_polynomial_data, gen=None):
     lambdas, Vt, data_eigvals = map(ensure_torch, (lambdas, Vt, data_eigvals))
     dim = len(data_eigvals)
@@ -203,29 +203,30 @@ def get_synthetic_dataset(X=None, data_eigvals=None, d=500, N=15000, offset=3, a
     y = ensure_torch(H) @ v_true + ensure_torch(torch.normal(0., noise_size, (H.shape[0],), generator=gen, device=H.device))#/H.shape[0]**(0.5)
     return X, y, H, monomials, hea_eigvals, v_true, data_eigvals
 
-## leftover that might be useful later:
-# from scipy.special import zeta
-# def get_powerlaw_target(H, source_exp, offset=6, normalizeH=False, include_noise=False):
-#     if source_exp <= 1:
-#         raise ValueError("source_exp must be > 1 for powerlaw target")
-#     if offset < 1:
-#         raise ValueError("offset ≥ 1 required")
-#     M, P = H.shape
-#     if normalizeH:
-#         H = H / np.linalg.norm(H, axis=0, keepdims=True)
-#     squared_coeffs = get_powerlaw(P, source_exp, offset=offset)
-#     # Generate random signs for coefficients
-#     signs = -1 + 2*np.random.randint(0, 2, size=squared_coeffs.shape)
-#     coeffs = np.sqrt(squared_coeffs) * signs.astype(float)
-#     y = H @ coeffs
-#     if include_noise:
-#         totalsum = zeta(source_exp, offset)  # sum_{k=offset  }^infty k^{-exp}
-#         tailsum = zeta(source_exp, offset+P) # sum_{k=offset+P}^infty k^{-exp}
-#         noise_var = tailsum/(totalsum - tailsum)
-#         noise = np.random.normal(0, np.sqrt(noise_var / M), y.shape)
-#         # snr = y @ y / (noise @ noise)
-#         y /= np.linalg.norm(y)
-#         y += noise
-#     # we expect size(y_i) ~ 1
-#     y = np.sqrt(M) * y / np.linalg.norm(y)
-#     return y
+
+# leftover that might be useful later:
+from scipy.special import zeta
+def get_powerlaw_target(H, source_exp, offset=6, normalizeH=False, include_noise=False):
+    if source_exp <= 1:
+        raise ValueError("source_exp must be > 1 for powerlaw target")
+    if offset < 1:
+        raise ValueError("offset ≥ 1 required")
+    M, P = H.shape
+    if normalizeH:
+        H = H / np.linalg.norm(H, axis=0, keepdims=True)
+    squared_coeffs = get_powerlaw(P, source_exp, offset=offset)
+    # Generate random signs for coefficients
+    signs = -1 + 2*np.random.randint(0, 2, size=squared_coeffs.shape)
+    coeffs = np.sqrt(squared_coeffs) * signs.astype(float)
+    y = H @ coeffs
+    if include_noise:
+        totalsum = zeta(source_exp, offset)  # sum_{k=offset  }^infty k^{-exp}
+        tailsum = zeta(source_exp, offset+P) # sum_{k=offset+P}^infty k^{-exp}
+        noise_var = tailsum/(totalsum - tailsum)
+        noise = np.random.normal(0, np.sqrt(noise_var / M), y.shape)
+        # snr = y @ y / (noise @ noise)
+        y /= np.linalg.norm(y)
+        y += noise
+    # we expect size(y_i) ~ 1
+    y = np.sqrt(M) * y / np.linalg.norm(y)
+    return y

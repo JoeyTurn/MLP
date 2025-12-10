@@ -5,7 +5,6 @@ import torch
 
 from itertools import permutations
 
-# TODO: implement A and B initializations here I think and implement target initializations somewhere as well.
 class Monomial(dict):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -39,39 +38,7 @@ class Monomial(dict):
     def __repr__(self):
         return self.__str__()
 
-    def get_tensors(self, d: int) -> dict:
-        tensors = {degree: torch.zeros([d] * degree) for degree in range(0, self.degree() + 1)}
-
-        indices_power = []
-        for index in self.keys():
-            for _ in range(self[index]):
-                indices_power.append(index)
-
-        # Only unique permutations (account for duplicates where order doesn't matter)
-        perms = list(set(permutations(indices_power)))
-
-        for perm in perms:
-            tensors[self.degree()][tuple(perm)] = 1 / len(perms)
-
-
-        return tensors
-
-    def evaluate(self, X, gamma=1.0):
-        X = ensure_torch(X)
-        
-        N = X.shape[0]
-        if self.degree() == 0:
-            return torch.ones(N, device=X.device, dtype=X.dtype)
-
-        y = torch.ones(N, device=X.device, dtype=X.dtype)
-        for index, exponent in self.items():
-            index = int(index)
-            exponent = int(exponent)
-            
-            y.mul_((gamma * X[:, index]) ** exponent)
-
-        return y
-
+    
     @classmethod
     def from_repr(cls, s: str) -> "Monomial":
         """
