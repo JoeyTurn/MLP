@@ -33,13 +33,13 @@ def main(iterators, iterator_names=None, global_config=None, bfn=None):
     Returns:
         dict with keys: "jobs", "var_axes", "losses", "timekeys", "extras"
     """
-    # Normalize iterator_names
+    
     if iterator_names is None:
         iterator_names = [f"iter_{i}" for i in range(len(iterators))]
     elif len(iterator_names) != len(iterators):
         raise ValueError(f"Length of iterator_names ({len(iterator_names)}) must match iterators ({len(iterators)})")
 
-    # Generate all job combinations using itertools.product
+    #gen all jobs
     jobs = list(product(*iterators))
 
     var_axes = list(iterator_names)
@@ -67,7 +67,7 @@ def main(iterators, iterator_names=None, global_config=None, bfn=None):
 
     # Create and start worker processes
     # Note: global_config and any needed configs should be passed to worker
-    procs = [ctx.Process(target=worker, args=(dev, job_queue, result_queue, global_config, bfn))
+    procs = [ctx.Process(target=worker, args=(dev, job_queue, result_queue, global_config, iterator_names, bfn))
              for dev in range(NUM_GPUS)]
     for p in procs:
         p.start()
@@ -91,18 +91,13 @@ def main(iterators, iterator_names=None, global_config=None, bfn=None):
                 for kidx, k in enumerate(grab_aliases):
                     et_extras[k][job] = others[kidx]
                 
-                # Format postfix string dynamically from job tuple and iterator names
+                if not(global_config.ONLYTHRESHOLDS):
+                    train_losses = train_losses[-1]
+                    test_losses = test_losses[-1]
+                
                 job_str = " | ".join([f"{name}={val}" for name, val in zip(iterator_names, job)])
-                
-                if not(global_config and hasattr(global_config, 'ONLYTHRESHOLDS') and global_config.ONLYTHRESHOLDS):
-                    train_losses_display = train_losses[-1] if isinstance(train_losses, (list, np.ndarray)) else train_losses
-                    test_losses_display = test_losses[-1] if isinstance(test_losses, (list, np.ndarray)) else test_losses
-                else:
-                    train_losses_display = train_losses
-                    test_losses_display = test_losses
-                
                 pbar.set_postfix_str(
-                    f"train {train_losses_display:.3g} | test {test_losses_display:.3g} | timekey {timekeys} | {job_str}",
+                    f"train {test_losses:.3g} | test {train_losses:.3g} | timekey {timekeys} | {job_str}",
                     refresh=False
                 )
             else:

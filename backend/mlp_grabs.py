@@ -2,10 +2,7 @@ import torch
 import torch.nn as nn
 import numpy as np
 
-import sys
-sys.path.append("../")
-
-from utils import ensure_torch, ensure_numpy
+from backend.utils import ensure_torch, ensure_numpy
 
 def get_Win(model: nn.Module, *, detach: bool = True, **kwargs):
     Win = model.input_layer.weight
@@ -58,9 +55,72 @@ def get_W_trace(W: torch.Tensor, **kwargs):
     """
     return torch.trace(W).item()
 
+
+def empirical_ntk(model: nn.Module,
+                  X: torch.Tensor,
+                  create_graph: bool = False) -> torch.Tensor:
+    """
+    Compute empirical NTK matrix K_ij = <∂θ f(x_i), ∂θ f(x_j)>
+    for a scalar-output model.
+
+    Args
+    ----
+    model : nn.Module
+        PyTorch model; output must be scalar per example.
+    X : torch.Tensor
+        Input data of shape [N, d]. Must require grad on params, not on X.
+    create_graph : bool
+        If True, keep graph for higher-order derivatives (usually False).
+
+    Returns
+    -------
+    K : torch.Tensor
+        NTK matrix of shape [N, N].
+    """
+    model.eval()  # just to be safe; no dropout/bn updates
+    device = next(model.parameters()).device
+    X = X.to(device)
+
+    # collect parameters we differentiate w.r.t.
+    params = [p for p in model.parameters() if p.requires_grad]
+    num_params = sum(p.numel() for p in params)
+
+    N = X.shape[0]
+    J = torch.zeros(N, num_params, device=device)
+
+    # build Jacobian row-by-row
+    offset_slices = []
+    start = 0
+    for p in params:
+        n = p.numel()
+        offset_slices.append(slice(start, start + n))
+        start += n
+
+    for i in range(N):
+        model.zero_grad(set_to_none=True)
+        out_i = model(X[i:i+1]).squeeze()  # scalar
+        # d out_i / d theta
+        grads = torch.autograd.grad(
+            out_i,
+            params,
+            retain_graph=False,
+            create_graph=create_graph,
+            allow_unused=False
+        )
+        # flatten and stuff into J[i]
+        row = []
+        for g in grads:
+            row.append(g.reshape(-1))
+        J[i] = torch.cat(row, dim=0)
+
+    # NTK = J J^T
+    K = J @ J.t()
+    return K
+
+
+
 import math
 @torch.no_grad()
-# compute_monomial_param_proxy
 def T_mixed_bias(model, data_eigvals, monomial, num_gh=32, **kwargs):
     """
     Parameter-space proxy for the Hermite coefficient along a given monomial.
@@ -201,140 +261,3 @@ def T_mixed_bias(model, data_eigvals, monomial, num_gh=32, **kwargs):
     C_mono = contrib.sum()          # scalar
 
     return ensure_numpy(C_mono)
-
-
-@torch.no_grad()
-# T_mixed_bias
-def T_mixed_bis(model, data_eigvals, monomial, *, eps: float = 1e-12,
-                 normalize: str = "unsigned_rms_calib", forward_gain: float = 1.0, preact_gain: float = 1.0,
-                 **kwargs):
-    # --- helpers (device-safe) ---
-    def _phi(x): return torch.exp(-0.5 * x * x) / x.new_tensor((2.0*torch.pi)**0.5)
-    def _Phi(x): return 0.5 * (1.0 + torch.erf(x / x.new_tensor(2.0**0.5)))
-    def _C_n(bhat, n: int):
-        if n == 0: return _phi(bhat) + bhat * _Phi(bhat)
-        if n == 1: return _Phi(bhat)
-        if n == 2: return 0.5 * _phi(bhat)
-        if n == 3: return -(bhat * _phi(bhat)) / 6.0
-        if n == 4: return ((3.0*bhat*bhat - 6.0) * _phi(bhat)) / 24.0
-        raise NotImplementedError("C_n implemented for n=0..4 only.")
-
-    data_eigvals = ensure_torch(data_eigvals)
-    Win, b_in = get_Win(model)
-    Wout, _   = get_Wout(model)
-    a = Wout.view(-1)
-    _, d = Win.shape
-
-    if kwargs.get("force_monomial", False):
-        monomial = kwargs["force_monomial"]
-    # print(monomial)
-    basis = monomial.basis() if hasattr(monomial,"basis") else monomial
-    axes_sorted = sorted(basis.keys())
-    powers_sorted = [int(basis[ax]) for ax in axes_sorted]
-    axes_sorted = [int(ax) for ax in axes_sorted]
-    
-    idx = torch.as_tensor([ax for ax in axes_sorted],
-                          device=Win.device, dtype=torch.long)
-    if not ((idx >= 0).all() and (idx < d).all()):
-        raise IndexError("Axis out of range.")
-
-    # --- build u, α, û, b̂ ---
-    W_sub = Win[:, idx]
-    gamma_sqrt = data_eigvals[idx].sqrt().to(Win.dtype)
-    u = (W_sub * gamma_sqrt) * preact_gain
-
-    alpha = u.norm(dim=1) # scaled pre-activation norm per input axis
-    mask  = (alpha > eps).to(Win.dtype)
-    uhat  = torch.where(alpha[:,None] > eps, u / (alpha[:,None] + eps), torch.zeros_like(u))
-    bhat  = torch.where(alpha > eps, b_in / (alpha + eps), torch.zeros_like(alpha))
-
-    n_total = int(sum(powers_sorted))
-    Cn = _C_n(bhat, n_total)
-
-    exps = torch.as_tensor(powers_sorted, device=Win.device, dtype=Win.dtype)
-    axis_factor = torch.pow(uhat, exps).prod(dim=1)
-    
-    # contrib = a * (alpha**n_total) * Cn * axis_factor * mask
-
-    contrib = a * alpha * Cn * axis_factor * mask
-    
-    numer   = contrib.sum()
-
-    def _psi_for(order, alpha, bhat, uhat_i, mask):
-        # α^1 homogeneity, per-order C_k, per-axis angular power
-        # assumes you have _C_n(bhat, n) already
-        return (alpha * _C_n(bhat, order) * (uhat_i ** order) * mask)
-
-    if normalize == "abs_corr_orth":
-        # build lower-order ψ's for this axis i
-        u_i = uhat[:, 0]               # the selected axis (one-axis probe)
-        # cache ψ_ℓ for ℓ = 1..k
-        k = int(sum(powers_sorted))
-        psis = [ _psi_for(ell, alpha, bhat, u_i, mask) for ell in range(1, k+1) ]
-
-        # Gram–Schmidt: orthogonalize ψ_k against ψ_1..ψ_{k-1}
-        psi_k = psis[-1]
-        for psi_l in psis[:-1]:
-            denom = (psi_l @ psi_l).clamp_min(1e-20)
-            psi_k = psi_k - ((psi_k @ psi_l) / denom) * psi_l
-
-        # correlation with a (scale-free; no forward_gain)
-        num  = (a * psi_k).sum()
-        den  = (a.norm() * psi_k.norm()).clamp_min(1e-20)
-        return ensure_numpy((num.abs() / den))
-
-
-    if normalize == "none":
-        return ensure_numpy(forward_gain * numer)
-    
-    if normalize == "unsigned_l1":
-        return ensure_numpy(forward_gain * contrib.abs().sum())
-
-    if normalize == "unsigned_rms":
-        return ensure_numpy(forward_gain * (torch.linalg.vector_norm(contrib))**(1/n_total))
-
-    if normalize == "unsigned_rms_calib":
-        k = int(n_total)
-        valid = (alpha > eps)
-        if valid.sum() == 0:
-            return ensure_numpy(torch.tensor(0.0))
-
-        # --- 1) ReLU coefficient calibration (data-driven, per step) ---
-        # RMS over active units of C_k(b̂); also compute for a reference order (default 1 or 3)
-        bh = bhat[valid]
-        # C1(b̂) = Φ(b̂), Cn already computed for this k
-        Phi = 0.5 * (1.0 + torch.erf(bh / (2.0**0.5)))
-        C1  = Phi
-        Ck  = Cn[valid]
-
-        rms = lambda x: torch.sqrt((x*x).mean().clamp_min(1e-20))
-        Rk  = rms(Ck)
-        Rref = rms(C1)         # set reference order = 1; see note below
-
-        # --- 2) Angular calibration (theoretical baseline) ---
-        # μ_{d,p} = E[|V_1|^p], V ~ Unif(S^{d-1})
-        d = Win.shape[1]
-        def mu_d(p):
-            return torch.exp(
-                torch.lgamma(torch.tensor((p+1)/2, device=Win.device, dtype=Win.dtype)) +
-                torch.lgamma(torch.tensor(d/2,       device=Win.device, dtype=Win.dtype)) -
-                0.5*torch.log(torch.tensor(torch.pi, device=Win.device, dtype=Win.dtype)) -
-                torch.lgamma(torch.tensor((d+p)/2,   device=Win.device, dtype=Win.dtype))
-            )
-
-        # overall scalar to put order-k on the same nominal scale as the reference
-        s_k = (Rref / Rk) * torch.sqrt( (mu_d(2) / mu_d(2*k)).clamp_min(1e-20) )
-
-        val = s_k * torch.linalg.vector_norm(contrib)
-        return ensure_numpy(forward_gain * val)
-
-    # correlation-style (scale/gauge/width invariant)
-    if normalize in ("corr", "abs_corr"):
-        den_a  = a.norm() + eps
-        den_w  = torch.linalg.vector_norm((alpha**n_total) * Cn * axis_factor * mask) + eps
-        val = numer / (den_a * den_w)
-        if normalize == "abs_corr":
-            val = val.abs()
-        return ensure_numpy(forward_gain * val)
-
-    raise ValueError("normalize must be 'none' | 'corr' | 'abs_corr'")

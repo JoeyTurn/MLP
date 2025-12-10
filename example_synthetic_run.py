@@ -11,34 +11,36 @@ from backend.utils import ensure_torch, load_json
 
 from .ntk_coeffs import get_relu_level_coeff_fn
 
-# from FileManager import FileManager
+import os, sys
+from FileManager import FileManager
+
 
 if __name__ == "__main__":
-    # datapath = os.getenv("DATASETPATH")
-    # exptpath = os.getenv("EXPTPATH")
-    # if datapath is None:
-    #     raise ValueError("must set $DATASETPATH environment variable")
-    # if exptpath is None:
-    #     raise ValueError("must set $EXPTPATH environment variable")
-    # expt_dir = os.path.join(exptpath, "phlab", args.EXPT_NAME, args.DATASET)
 
-    # if not os.path.exists(expt_dir):
-    #     os.makedirs(expt_dir)
-    # expt_fm = FileManager(expt_dir)
-    # print(f"Working in directory {expt_dir}.")
-    # hypers = dict(expt_name=args.EXPT_NAME, dataset=args.DATASET, target_function_type=args.TARGET_FUNCTION_TYPE,
-    #             width=args.WIDTH, depth=args.DEPTH, gamma=args.GAMMA, lr=args.LR, seed=args.SEED, n_train=args.N_TRAIN, n_test=args.N_TEST)
-    # with open(expt_fm.get_filename("hypers.json"), 'w') as f:
-    #     json.dump(hypers, f, indent=4)
-
-    bfn_config = {}#fill in
     args = parse_args() #default args
-    online = True
-    N_train=4000
-    N_test=1000
-    target = Monomial({10:1})
-    n_trials = 3
-    ns = np.logspace(2, np.log10(N_train+N_test), num=5, dtype=int)
+
+    # Set any args that we want to differ
+    args.ONLINE = True
+    args.N_TRAIN=4000
+    args.N_TEST=1000
+    args.NUM_TRIALS = 3
+    args.N_TOT = args.N_TEST+args.N_TRAIN
+    
+    datapath = os.getenv("DATASETPATH") #datapath = os.path.join(os.getenv(...))
+    exptpath = os.getenv("EXPTPATH") #same here
+    if datapath is None:
+        raise ValueError("must set $DATASETPATH environment variable")
+    if exptpath is None:
+        raise ValueError("must set $EXPTPATH environment variable")
+    expt_name = "example_mlp_run"
+    dataset = "synthetic"
+    expt_dir = os.path.join(exptpath, "example_folder", expt_name, dataset)
+
+    if not os.path.exists(expt_dir):
+        os.makedirs(expt_dir)
+    expt_fm = FileManager(expt_dir)
+    print(f"Working in directory {expt_dir}.")
+
     
     if args.TARGET_MONOMIALS is not None:
         args.TARGET_MONOMIALS = [Monomial(m) for m in args.TARGET_MONOMIALS]
@@ -69,11 +71,8 @@ if __name__ == "__main__":
         bfn_config = dict(lambdas=lambdas, Vt=Vt, data_eigvals=data_eigvals, N=args.N_TOT)
     
 
-    batch_function = lambda n, X, y, target_monomial, gen: polynomial_batch_fn(**bfn_config, monomials=target_monomial, bsz=n, gen=gen, X=X, y=y)
-    
-    args.update({"ONLINE": online, "N_TRAIN": N_train, "N_TEST": N_test,
-                 "Ns": ns, "NUM_TRIALS": n_trials})
-    
+    batch_function = lambda n, X, y, gen, target_monomial: polynomial_batch_fn(**bfn_config, monomials=target_monomial, bsz=n, gen=gen, X=X, y=y)
+
     global_config = dict(DEPTH=args.DEPTH, WIDTH=args.WIDTH, LR=args.LR, GAMMA=args.GAMMA,
         EMA_SMOOTHER=args.EMA_SMOOTHER, MAX_ITER=args.MAX_ITER,
         LOSS_CHECKPOINTS=args.LOSS_CHECKPOINTS, N_TEST=args.N_TEST,
@@ -87,15 +86,13 @@ if __name__ == "__main__":
     global_config.update({"otherreturns": grabs})
     
     mp.set_start_method("spawn", force=True)
-    targets = ["monomial_1", "monomial_2", "monomial_3"]
     sample_sizes = [100, 500, 1000]
     trials = [0, 1, 2]
     
-    iterators = [sample_sizes, targets, trials]
-    iterator_names = ["target", "ntrain", "trial"]
+    iterators = [args.N_SAMPLES, args.NUM_TRIALS, args.TARGET_MONOMIALS]
+    iterator_names = ["ntrain", "trial", "target_monomial"]
     
 
-    result = run_job_iterator(iterators, iterator_names, args, bfn=batch_function)
-    # run.main(args)
-    # expt_fm.save(result, "result.pickle")
+    result = run_job_iterator(iterators, iterator_names, global_config, bfn=batch_function)
+    expt_fm.save(result, "result.pickle")
     torch.cuda.empty_cache()

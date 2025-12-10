@@ -5,9 +5,9 @@ from backend.utils import seed_everything, derive_seed
 from model import MLP
 from backend.trainloop import train_MLP
 
-def run_job(device_id, job, global_config, bfn=None, **kwargs):
+def run_job(device_id, job, global_config, iterator_names, bfn=None, **kwargs):
     """
-    job: (target, n, trial)
+    job: (n, trial, else)
     global_config: anything read-only you want to avoid capturing from globals
     bfn: batch function
     """
@@ -18,13 +18,15 @@ def run_job(device_id, job, global_config, bfn=None, **kwargs):
     job_seed  = derive_seed(base_seed, device_id)
     GEN, RNG = seed_everything(job_seed, device_id)
 
+    global_config.update({iterator_names[i]: job[i] for i in range(2, len(iterator_names))})
+
     torch.set_num_threads(1)  # avoid CPU contention when many procs
 
-    X_te, y_te = bfn(n=global_config["N_TEST"], X=None, y=None, **kwargs)(0)
+    X_te, y_te = bfn(n=global_config["N_TEST"], X=None, y=None, gen=GEN, **{iterator_names[i]: job[i] for i in range(2, len(iterator_names))})(0)
     
-    X_tr, y_tr = bfn(job[0], X=None, y=None, **kwargs)(job[1]) if not global_config["ONLINE"] else None, None
+    X_tr, y_tr = bfn(job[0], X=None, y=None, gen=GEN, **{iterator_names[i]: job[i] for i in range(2, len(iterator_names))})(job[1]) if not global_config["ONLINE"] else None, None
 
-    bfn = bfn(job[0], X=X_tr, y=y_tr, **kwargs)
+    bfn = bfn(job[0], X=X_tr, y=y_tr, gen=GEN, **{iterator_names[i]: job[i] for i in range(2, len(iterator_names))})
     
     model = MLP(d_in=global_config["DIM"], depth=global_config["DEPTH"],
                 d_out=1, width=global_config["WIDTH"]).to(device)
@@ -54,4 +56,4 @@ def run_job(device_id, job, global_config, bfn=None, **kwargs):
     torch.cuda.empty_cache()
     gc.collect()
 
-    return (timekeys, train_losses, test_losses, *otherouts)
+    return (job, timekeys, train_losses, test_losses, *otherouts)
