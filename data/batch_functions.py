@@ -29,9 +29,9 @@ def general_batch_fn(X_total, y_total, X=None, y=None, bsz=128,
             return X, y
         with torch.no_grad():
             N_total = X_total.shape[0]
-            indices = torch.randint(0, N_total, (bsz,), generator=gen)
-            X_batch = ensure_torch(X_total[indices])
-            y_batch = ensure_torch(y_total[indices])
+            indices = torch.randint(0, N_total, (bsz,), generator=gen, device=gen.device)
+            X_batch = ensure_torch(X_total.to(gen.device)[indices])
+            y_batch = ensure_torch(y_total.to(gen.device)[indices])
             return X_batch, y_batch
     return batch_fn
 

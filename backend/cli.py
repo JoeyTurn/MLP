@@ -198,7 +198,7 @@ def parse_args():
     p.add_argument("--SEED", type=int, default=42, help="RNG seed.")
     p.add_argument("--LOSS_CHECKPOINTS", type=float, nargs="+", default=[0.15, 0.1], help="Loss checkpoints to record.")
     p.add_argument("--EMA_SMOOTHER", type=float, default=0.9, help="EMA smoother for loss tracking.")
-    p.add_argument("--DETERMINSITIC", type=str2bool, default=True, help="Whether to use deterministic training.")
+    p.add_argument("--DETERMINISTIC", type=str2bool, default=True, help="Whether to use deterministic training.")
     p.add_argument("--VERBOSE", type=str2bool, default=False, help="Whether to print out training info.")
     
     p.add_argument("--EXPT_NAME", type=str, default="mlp-learning-curves", help="Where to save results.")
@@ -216,3 +216,44 @@ def parse_args():
     p.add_argument("--other_model_gram", type=json.loads, default={}, help='Per-alias overrides, e.g. {"Wii1":{"source":"out","concat_outside":"True"}}')
     p.add_argument("--other_model_kwargs", type=json.loads, default={}, help='Per-alias kwargs, e.g. {"Wii1":{"i":1}}')
     return p.parse_args()
+
+def base_args():
+    return {
+    "ONLINE": True,
+    "N_TRAIN": 4000,
+    "N_TEST": 10_000,
+    "TARGET_MONOMIALS": None,
+    "ONLYTHRESHOLDS": True,
+    "N_SAMPLES": [1024],
+    "NUM_TRIALS": 1,
+    "MAX_ITER": int(1e5),
+    "LR": 1e-2,
+    "DEPTH": 2,
+    "WIDTH": 8192,
+    "GAMMA": 1.0,
+    "DEVICES": [0],
+    "SEED": 42,
+    "LOSS_CHECKPOINTS": [0.15, 0.1],
+    "EMA_SMOOTHER": 0.9,
+    "DETERMINSITIC": True,
+    "VERBOSE": False,
+    "datasethps": {
+        "normalized": True,
+        "cutoff_mode": 40_000,
+        "d": 200,
+        "offset": 6,
+        "alpha": 2.0,
+        "noise_size": 1,
+        "yoffset": 1.2,
+        "beta": 1.2,
+        "classes": None,
+        "binarize": False,
+        "weight_variance": 1,
+        "bias_variance": 1,
+    },
+    "other_model_grabs": {},
+    "W_source": "in",
+    "concat_outside": True,
+    "other_model_gram": {},
+    "other_model_kwargs": {},
+}

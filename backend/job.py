@@ -18,7 +18,7 @@ def run_job(device_id, job, global_config, bfn_config, iterator_names, **kwargs)
     base_seed = global_config.get("SEED", None)
     job_seed  = derive_seed(base_seed, device_id)
     GEN, RNG = seed_everything(job_seed, device_id)
-
+    
     iter_spec = {iterator_names[i]: job[i] for i in range(2, len(iterator_names))}
     global_config.update(iter_spec)
 
@@ -27,13 +27,12 @@ def run_job(device_id, job, global_config, bfn_config, iterator_names, **kwargs)
     bfn_config_copy = bfn_config.copy()
     name = bfn_config_copy.pop("bfn_name")#["bfn_name"]
     base_bfn = BATCH_FNS[name]
-    bfn = lambda n, X, y, gen, target_monomial: base_bfn(**bfn_config_copy, monomials=target_monomial, bsz=n, gen=gen, X=X, y=y)
+    bfn = lambda n, X, y, **kwargs: base_bfn(**bfn_config_copy, bsz=n, gen=GEN, X=X, y=y, **kwargs)
+    X_te, y_te = bfn(n=global_config["N_TEST"], X=None, y=None, **iter_spec)(0)
     
-    X_te, y_te = bfn(n=global_config["N_TEST"], X=None, y=None, gen=GEN, **iter_spec)(0)
+    X_tr, y_tr = bfn(job[0], X=None, y=None, **iter_spec)(job[1]) if not global_config["ONLINE"] else None, None
     
-    X_tr, y_tr = bfn(job[0], X=None, y=None, gen=GEN, **iter_spec)(job[1]) if not global_config["ONLINE"] else None, None
-
-    bfn = bfn(job[0], X=X_tr, y=y_tr, gen=GEN, **iter_spec)
+    bfn = bfn(job[0], X=X_tr, y=y_tr, **iter_spec)
     
     model = MLP(d_in=global_config["DIM"], depth=global_config["DEPTH"],
                 d_out=1, width=global_config["WIDTH"]).to(device)

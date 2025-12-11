@@ -33,14 +33,13 @@ if __name__ == "__main__":
     args.ONLINE = True
     args.N_TRAIN=4000
     args.N_TEST=1000
-    args.NUM_TRIALS = 3
     args.N_TOT = args.N_TEST+args.N_TRAIN
     args.TARGET_MONOMIALS = [Monomial({0:1}), Monomial({1:1})]
     args.NUM_TRIALS = 2
     args.N_SAMPLES = [1024]
 
     iterators = [args.N_SAMPLES, range(args.NUM_TRIALS), args.TARGET_MONOMIALS]
-    iterator_names = ["ntrain", "trial", "target_monomial"]
+    iterator_names = ["ntrain", "trial", "monomials"]
     
     datapath = os.getenv("DATASETPATH") #datapath = os.path.join(os.getenv(...))
     exptpath = os.getenv("EXPTPATH") #same here
@@ -80,7 +79,6 @@ if __name__ == "__main__":
         EMA_SMOOTHER=args.EMA_SMOOTHER, MAX_ITER=args.MAX_ITER,
         LOSS_CHECKPOINTS=args.LOSS_CHECKPOINTS, N_TEST=args.N_TEST,
         SEED=args.SEED, ONLYTHRESHOLDS=args.ONLYTHRESHOLDS, DIM=dim,
-        TARGET_FUNCTION_TYPE=args.TARGET_FUNCTION_TYPE,
         ONLINE=args.ONLINE, VERBOSE=args.VERBOSE
         )
 

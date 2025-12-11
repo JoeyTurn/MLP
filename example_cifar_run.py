@@ -4,12 +4,8 @@ import torch
 import torch.multiprocessing as mp
 from backend.cli import parse_args, build_other_grabs
 
-from data.monomial import Monomial
-from data.data import polynomial_batch_fn
 from backend.job_iterator import main as run_job_iterator
-from backend.utils import ensure_torch, load_json
-
-from ntk_coeffs import get_relu_level_coeff_fn
+from backend.utils import ensure_torch
 
 import os, sys
 from FileManager import FileManager
@@ -20,12 +16,12 @@ if __name__ == "__main__":
     args = parse_args() #default args
 
     # Set any args that we want to differ
-    args.ONLINE = True
+    args.ONLINE = False
     args.N_TRAIN=4000
     args.N_TEST=1000
-    args.NUM_TRIALS = 3
     args.N_TOT = args.N_TEST+args.N_TRAIN
     args.CLASSES = [[0], [6]]
+    args.NORMALIZED = True
     args.NUM_TRIALS = 2
     args.N_SAMPLES = [1024]
     args.GAMMA = [0.1, 1, 10]
@@ -49,19 +45,19 @@ if __name__ == "__main__":
     print(f"Working in directory {expt_dir}.")
 
 
-    from ImageData import ImageData
+    from ImageData import ImageData, preprocess
     PIXEL_NORMALIZED =  False # Don't normalize pixels, normalize samples
-    classes = args.datasethps['classes']
-    normalized = args.datasethps['normalized']
+    classes = args['CLASSES'] if args.datasethps is not None else args.datasethps.get('classes', None)
+    normalized = args['NORMALIZED'] if args.datasethps is not None else args.datasethps.get('normalized', True)
 
     if classes is not None:
-        imdata = ImageData('cifar10', "../data", classes=classes, onehot=len(classes)!=2, format="N")
+        imdata = ImageData('cifar10', "../data", classes=classes, onehot=len(classes)!=2)
     else:
-        imdata = ImageData('cifar10', "../data", classes=classes, onehot=False, format="N")
-    X_train, y_train = imdata.get_dataset(args.N_TRAIN, **args.datasethps, get='train',
-                                        centered=True, normalize=PIXEL_NORMALIZED)
-    X_test, y_test = imdata.get_dataset(args.N_TEST, **args.datasethps, get='test',
-                                        centered=True, normalize=PIXEL_NORMALIZED)
+        imdata = ImageData('cifar10', "../data", classes=classes, onehot=False)
+    X_train, y_train = imdata.get_dataset(args.N_TRAIN, get='train')
+    X_train = preprocess(X_train, center=True, greyscale=True, normalize=PIXEL_NORMALIZED)
+    X_test, y_test = imdata.get_dataset(args.N_TEST, get='test')
+    X_test = preprocess(X_test, center=True, greyscale=True, normalize=PIXEL_NORMALIZED)
     X_train, y_train, X_test, y_test = map(ensure_torch, (X_train, y_train, X_test, y_test))
     y_train = y_train.squeeze()
     y_test = y_test.squeeze()
@@ -77,14 +73,13 @@ if __name__ == "__main__":
     U, lambdas, Vt = torch.linalg.svd(X_full, full_matrices=False)
     dim = X_full.shape[1]
 
-    bfn_config = dict(X_full = X_full, y_full = y_full, bfn_name="general_batch_fn")
+    bfn_config = dict(X_total = X_full, y_total = y_full, bfn_name="general_batch_fn")
     del X_full, y_full   
 
     global_config = dict(DEPTH=args.DEPTH, WIDTH=args.WIDTH, LR=args.LR, GAMMA=args.GAMMA,
         EMA_SMOOTHER=args.EMA_SMOOTHER, MAX_ITER=args.MAX_ITER,
         LOSS_CHECKPOINTS=args.LOSS_CHECKPOINTS, N_TEST=args.N_TEST,
         SEED=args.SEED, ONLYTHRESHOLDS=args.ONLYTHRESHOLDS, DIM=dim,
-        TARGET_FUNCTION_TYPE=args.TARGET_FUNCTION_TYPE,
         ONLINE=args.ONLINE, VERBOSE=args.VERBOSE
         )
 
