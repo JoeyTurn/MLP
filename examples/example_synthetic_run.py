@@ -8,7 +8,7 @@ from data.monomial import Monomial
 from backend.job_iterator import main as run_job_iterator
 from backend.utils import ensure_torch, load_json
 
-from ntk_coeffs import get_relu_level_coeff_fn
+from data.ntk_coeffs import get_relu_level_coeff_fn
 
 import os, sys
 from FileManager import FileManager
@@ -69,10 +69,9 @@ if __name__ == "__main__":
     dim = X_full.shape[1]
 
     ## --- Target function defs ---
-    if args.TARGET_FUNCTION_TYPE == "monomial":
-        target_monomials = args.TARGET_MONOMIALS
-        targets = target_monomials
-        bfn_config = dict(lambdas=lambdas, Vt=Vt, data_eigvals=data_eigvals, N=args.N_TOT, bfn_name="polynomial_batch_fn")
+    target_monomials = args.TARGET_MONOMIALS
+    targets = target_monomials
+    bfn_config = dict(lambdas=lambdas, Vt=Vt, data_eigvals=data_eigvals, N=args.N_TOT, bfn_name="polynomial_batch_fn")
     
 
     global_config = dict(DEPTH=args.DEPTH, WIDTH=args.WIDTH, LR=args.LR, GAMMA=args.GAMMA,
