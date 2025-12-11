@@ -1,3 +1,9 @@
+**Requirements**
+
+Please have Dhruva Karkada's [mupify](https://github.com/dkarkada/mupify/tree/main) and [experiment core](https://github.com/dkarkada/expt-core/tree/main) installed and in the path.
+
+**Overview**
+
 This repo is the result of the past few months of tinkering around with MLPs, finding I would often need to change my training loop for the specific problem, or I would need to change my outer loop to deal with the cartesian product of experiments, or change my code altogether if I was doing online vs offline learning. I have tried to create this repo to address all of the above, resulting in code where any functions that need to be evaluated within the trainloop can be specified once as what is essentially a hyperparameter. This code is designed to be able to use both *.py* files as well as *.ipynb* notebooks, with minimal changes going between the two settings! The core functionality is hidden within the `backend` folder, defining the trainloop as well as multiprocessing and command-line specifications; this can largely be ignored for most use cases.
 
 The core trainloop is built off of batch functions, as are found in the `data` folder. As long as a specified batch function is similar in format to the ones I have provided as examples, they will be able to work for both offline and online learning! Also in the data folder I have included a few code chunks for generating synthetic monomial data from a Gaussian distribution.
