@@ -139,8 +139,8 @@ def parse_args():
     
     p.add_argument("--MAX_ITER", type=int_from_any, default=1e5, help="Steps per trial.")
     p.add_argument("--LR", type=float, default=1e-2, help="Learning rate.")
-    p.add_argument("--DEPTH", type=int_from_any, default=2, help="Number of hidden layers+1.")
-    p.add_argument("--WIDTH", type=int_from_any, default=8192, help="Width of hidden layers.")
+    p.add_argument("--depth", type=int_from_any, default=2, help="Number of hidden layers+1.")
+    p.add_argument("--width", type=int_from_any, default=8192, help="Width of hidden layers.")
     p.add_argument("--GAMMA", type=float, default=1.0, help="Richness parameter for training.")
     p.add_argument("--DEVICES", type=int, nargs="+", default=[0], help="GPU ids, e.g. --DEVICES 2 4")
     
@@ -174,8 +174,8 @@ def base_args():
     "NUM_TRIALS": 1,
     "MAX_ITER": int(1e5),
     "LR": 1e-2,
-    "DEPTH": 2,
-    "WIDTH": 8192,
+    "depth": 2,
+    "width": 8192,
     "GAMMA": 1.0,
     "DEVICES": [0],
     "SEED": 42,

@@ -2,7 +2,7 @@ import torch
 import gc
 import importlib
 
-from .utils import seed_everything, derive_seed
+from .utils import seed_everything, derive_seed, _extract_kwargs_for
 from model import MLP
 from .trainloop import train_MLP
 
@@ -55,8 +55,9 @@ def run_job(device_id, job, global_config, bfn_config, iterator_names, **kwargs)
 
     bfn = make_bfn(job[0], X=X_tr, y=y_tr, **iter_spec)
     
-    model = MLP(d_in=global_config["DIM"], depth=global_config["DEPTH"],
-                d_out=1, width=global_config["WIDTH"]).to(device)
+    global_config["d_in"] = global_config["DIM"] if "DIM" in global_config else global_config["dim"] if "dim" in global_config else global_config["d_in"]
+    mlp_kwargs, global_config = _extract_kwargs_for(MLP, global_config)
+    model = MLP(**mlp_kwargs).to(device)
 
     outdict = train_MLP(
         model=model,

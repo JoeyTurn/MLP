@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import os
 import json
+import inspect
 
 
 def ensure_numpy(x, dtype=np.float64, clone=False):
@@ -124,3 +125,24 @@ def load_config(path):
         if ext == ".json":
             return json.load(f)
     raise ValueError(f"Unsupported configuration file extension: {ext}")
+
+
+def _extract_kwargs_for(cls, kwargs):
+    """
+    Split kwargs into:
+      - subset that matches __init__ signature of cls
+      - the remaining kwargs
+
+    This works for both optimizers and loss modules.
+    """
+    sig = inspect.signature(cls.__init__)
+    valid = set(sig.parameters.keys()) - {"self"}  # e.g. {"params", "lr", "betas", ...}
+
+    used = {}
+    rest = {}
+    for k, v in kwargs.items():
+        if k in valid:
+            used[k] = v
+        else:
+            rest[k] = v
+    return used, rest

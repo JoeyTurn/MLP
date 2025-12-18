@@ -5,6 +5,7 @@ import torch.nn as nn
 import torch.optim as optim
 from mupify import mupify, rescale
 from model import centeredMLP
+from .utils import _extract_kwargs_for
 
 def _resolve_cls(spec, module):
     """
@@ -18,27 +19,6 @@ def _resolve_cls(spec, module):
     if callable(spec):
         return spec
     raise TypeError(f"optimizer/loss spec must be str or callable, got {type(spec)}")
-
-
-def _extract_kwargs_for(cls, kwargs):
-    """
-    Split kwargs into:
-      - subset that matches __init__ signature of cls
-      - the remaining kwargs
-
-    This works for both optimizers and loss modules.
-    """
-    sig = inspect.signature(cls.__init__)
-    valid = set(sig.parameters.keys()) - {"self"}  # e.g. {"params", "lr", "betas", ...}
-
-    used = {}
-    rest = {}
-    for k, v in kwargs.items():
-        if k in valid:
-            used[k] = v
-        else:
-            rest[k] = v
-    return used, rest
 
 
 def train_MLP(model, batch_function, lr=1e-2, max_iter=int(1e3), loss_checkpoints=None, percent_thresholds=None,
