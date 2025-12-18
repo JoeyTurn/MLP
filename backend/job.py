@@ -49,14 +49,16 @@ def run_job(device_id, job, global_config, bfn_config, iterator_names, **kwargs)
 
     def make_bfn(n, X, y, **kwargs):
         return base_bfn(**bfn_config_copy, bsz=n, gen=GEN, X=X, y=y, **kwargs)
-    
-    X_te, y_te = make_bfn(n=global_config["N_TEST"], X=None, y=None, **iter_spec)(0)
-    X_tr, y_tr = make_bfn(job[0], X=None, y=None, **iter_spec)(job[1]) if not global_config["ONLINE"] else None, None
 
-    bfn = make_bfn(job[0], X=X_tr, y=y_tr, **iter_spec)
+    bfn_iter_args, _ = _extract_kwargs_for(base_bfn, iter_spec)
+    
+    X_te, y_te = make_bfn(n=global_config["N_TEST"], X=None, y=None, **bfn_iter_args)(0)
+    X_tr, y_tr = make_bfn(job[0], X=None, y=None, **bfn_iter_args)(job[1]) if not global_config["ONLINE"] else None, None
+
+    bfn = make_bfn(job[0], X=X_tr, y=y_tr, **bfn_iter_args)
     
     global_config["d_in"] = global_config["DIM"] if "DIM" in global_config else global_config["dim"] if "dim" in global_config else global_config["d_in"]
-    mlp_kwargs, global_config = _extract_kwargs_for(MLP, global_config)
+    mlp_kwargs, _ = _extract_kwargs_for(MLP, global_config)
     model = MLP(**mlp_kwargs).to(device)
 
     outdict = train_MLP(
@@ -71,7 +73,6 @@ def run_job(device_id, job, global_config, bfn_config, iterator_names, **kwargs)
         verbose=global_config["VERBOSE"],
         X_tr=X_tr, y_tr=y_tr,
         X_te=X_te, y_te=y_te,
-        # otherreturns=global_config.get("otherreturns", {}),
         **global_config,
     )
 

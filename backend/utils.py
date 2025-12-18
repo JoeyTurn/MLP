@@ -127,16 +127,25 @@ def load_config(path):
     raise ValueError(f"Unsupported configuration file extension: {ext}")
 
 
-def _extract_kwargs_for(cls, kwargs):
+def _extract_kwargs_for(target, kwargs):
     """
-    Split kwargs into:
-      - subset that matches __init__ signature of cls
-      - the remaining kwargs
+    `target` can be:
+      - a class (e.g. MLP)
+      - a function (e.g. polynomial_batch_fn)
 
-    This works for both optimizers and loss modules.
+    Returns:
+      used_kwargs, rest_kwargs
     """
-    sig = inspect.signature(cls.__init__)
-    valid = set(sig.parameters.keys()) - {"self"}  # e.g. {"params", "lr", "betas", ...}
+    if inspect.isclass(target):
+        # classes
+        sig = inspect.signature(target.__init__)
+        ignore = {"self"}
+    else:
+        # functions
+        sig = inspect.signature(target)
+        ignore = set()
+
+    valid = set(sig.parameters.keys()) - ignore
 
     used = {}
     rest = {}

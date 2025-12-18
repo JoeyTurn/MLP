@@ -34,6 +34,24 @@ def normalize_bfn_config(bfn_config, use_mp=False):
         
     return cfg
 
+
+def sanitize_expt_trace(obj):
+    """
+    Recursively walk `obj` and replace any value whose type is not in
+    ALLOWED_TYPES with the literal string 'str'.
+    """
+    ALLOWED_TYPES = (int, float, str, tuple, np.integer, np.floating)
+
+    if isinstance(obj, tuple):
+        return tuple(sanitize_expt_trace(v) for v in obj)
+
+    # Base case
+    if isinstance(obj, ALLOWED_TYPES):
+        return obj
+    else:
+        return str(obj)
+    
+
 ## --- Multiprocessing execution ---
 def main(iterators, iterator_names=None, global_config=None, bfn_config=None,
          use_mp: bool | None = None):
@@ -91,14 +109,13 @@ def main(iterators, iterator_names=None, global_config=None, bfn_config=None,
                     tb = traceback.format_exc()
                     kind, out = "err", (job, repr(e), tb)
 
-                # Now reuse the *same unpacking logic* you already have
                 if kind == "ok":
                     job, timekeys, train_losses, test_losses, *others = payload
-                    # Store results indexed by job tuple
+                    job = sanitize_expt_trace(job)
+
                     et_losses[job] = test_losses
                     et_timekeys[job] = timekeys
                     
-                    # Store any extra outputs from global_config
                     for kidx, k in enumerate(grab_aliases):
                         et_extras[k][job] = others[kidx]
                     
@@ -112,8 +129,7 @@ def main(iterators, iterator_names=None, global_config=None, bfn_config=None,
                         refresh=False
                     )
                 else:
-                    job, err = out
-                    print(f"[ERROR] {job}: {err}")
+                    print(f"[ERROR] {out[0]}: {out[1:]}")
 
                 done += 1
                 pbar.update(1)
