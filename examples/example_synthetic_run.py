@@ -3,20 +3,19 @@ import torch
 
 import torch.multiprocessing as mp
 import sys
-sys.path.append("/home/user/MLP/")
-from backend.cli import parse_args, build_other_grabs
+from MLPscape.backend.cli import parse_args, build_other_grabs
 
-from data.monomial import Monomial
-from backend.job_iterator import main as run_job_iterator
-from backend.utils import ensure_torch, load_json
+from MLPscape.data.monomial import Monomial
+from MLPscape.backend.job_iterator import main as run_job_iterator
+from MLPscape.backend.utils import ensure_torch, load_json
 
-from data.ntk_coeffs import get_relu_level_coeff_fn
+from MLPscape.data.ntk_coeffs import get_relu_level_coeff_fn
 
 import os, sys
 from FileManager import FileManager
 
-from backend.utils import ensure_torch
-from data.data import get_new_polynomial_data
+from MLPscape.backend.utils import ensure_torch
+from MLPscape.data.data import get_new_polynomial_data
 
 def polynomial_batch_fn(lambdas, Vt, monomials, bsz, data_eigvals, N=10,
                 X=None, y=None, data_creation_fn=get_new_polynomial_data, gen=None):

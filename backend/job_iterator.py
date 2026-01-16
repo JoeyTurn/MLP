@@ -12,8 +12,8 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 from ExptTrace import ExptTrace
 
-from .worker import worker
-from .job import run_job
+from MLPscape.backend.worker import worker
+from MLPscape.backend.job import run_job
 
 
 def normalize_bfn_config(bfn_config, use_mp=False):

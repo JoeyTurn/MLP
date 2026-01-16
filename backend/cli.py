@@ -47,7 +47,7 @@ class GrabRunner:
         return type(x).__name__
 
     def __call__(self, model, *_, **kwargs):
-        import data.mlp_grabs as m
+        import MLPscape.data.mlp_grabs as m
 
         fn     = getattr(m, self.base_fn_name)
         merged = {**self.base_kwargs, **kwargs}

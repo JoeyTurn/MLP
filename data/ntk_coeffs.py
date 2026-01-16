@@ -1,7 +1,7 @@
 ## relu ntk level coeffs
 
 import numpy as np
-from backend.utils import ensure_numpy
+from MLPscape.backend.utils import ensure_numpy
 
 @staticmethod
 def kernel_parse_kwargs(kwargs):

@@ -2,9 +2,9 @@ import numpy as np
 import torch
 
 import torch.multiprocessing as mp
-from backend.cli import parse_args, build_other_grabs
-from backend.job_iterator import main as run_job_iterator
-from backend.utils import ensure_torch
+from MLPscape.backend.cli import parse_args, build_other_grabs
+from MLPscape.backend.job_iterator import main as run_job_iterator
+from MLPscape.backend.utils import ensure_torch
 
 import os, sys
 from FileManager import FileManager

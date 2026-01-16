@@ -5,14 +5,9 @@ import math
 import os
 from einops import reduce, rearrange
 
-import sys
-sys.path.append("../")
+from MLPscape.data.monomial import generate_hea_monomials
+from MLPscape.backend.utils import ensure_numpy, ensure_torch
 
-try:
-    from .monomial import generate_hea_monomials
-except ImportError:
-    from monomial import generate_hea_monomials
-from backend.utils import ensure_numpy, ensure_torch
 from torch.utils.data import TensorDataset, DataLoader
 
 

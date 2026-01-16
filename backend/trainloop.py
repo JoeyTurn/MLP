@@ -4,8 +4,8 @@ import inspect
 import torch.nn as nn
 import torch.optim as optim
 from mupify import mupify, rescale
-from model import centeredMLP
-from .utils import _extract_kwargs_for
+from MLPscape.model import centeredMLP
+from MLPscape.backend.utils import _extract_kwargs_for
 
 def _resolve_cls(spec, module):
     """

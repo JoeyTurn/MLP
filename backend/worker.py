@@ -1,6 +1,6 @@
 import torch
-from .utils import tuple_to_numpy
-from .job import run_job
+from MLPscape.backend.utils import tuple_to_numpy
+from MLPscape.backend.job import run_job
 
 def worker(device_id, job_queue, result_queue, global_config, bfn_config, iterator_names=None):
     try: torch.cuda.set_device(device_id)

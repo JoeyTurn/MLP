@@ -2,9 +2,9 @@ import torch
 import gc
 import importlib
 
-from .utils import seed_everything, derive_seed, _extract_kwargs_for
-from model import MLP
-from .trainloop import train_MLP
+from MLPscape.backend.utils import seed_everything, derive_seed, _extract_kwargs_for
+from MLPscape.model import MLP
+from MLPscape.backend.trainloop import train_MLP
 
 def load_fn_from_file(path, name):
     """
