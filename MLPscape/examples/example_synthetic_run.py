@@ -81,8 +81,8 @@ if __name__ == "__main__":
     print(f"Working in directory {expt_dir}.")
 
 
-    from data.data import get_synthetic_X
-    from data.monomial import generate_hea_monomials
+    from MLPscape.data.data import get_synthetic_X
+    from MLPscape.data.monomial import generate_hea_monomials
 
     X_full, data_eigvals = get_synthetic_X(**args.datasethps, N=args.N_TOT, gen=torch.Generator(device='cuda').manual_seed(args.SEED))
     hea_eigvals, monomials = generate_hea_monomials(data_eigvals, num_monomials=args.datasethps['cutoff_mode'], **args.datasethps,
