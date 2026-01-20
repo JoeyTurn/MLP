@@ -45,21 +45,38 @@ global_config.update({"otherreturns": grabs})
 
 For the list of configurable (pre-set) hyperparameters and their default values, see below:
 
-- ONLINE: True - Sets if training is done with one set batch or with a variable training batch
-- N_SAMPLES: 1024 - Number of samples that get used throughout training (the batch size if ONLINE is True)
-- N_TRIAN: 4000 - Along with N_TEST, is used only to define the total number of samples that exist for your data
-- N_TEST: 10_000 - Testset size (testset is defined once and is based off the batch function)
-                   Note: if you want a specific testset, set it through global_config["X_te"] and global_config["y_te"].
-- ONLYTHRESHOLDS: True - If True, the results will only be from the trained network instead of the full run
-- NUM_TRIALS: 1 - Number of trials
-- MAX_ITER: int(1e5) - Maximum number of gradient steps the network will take
-- LR: 1e-2 - The base learning rate (to be rescaled in the muP setting)
-- DEPTH: 2 - The number of hidden layers of the network (must be > 0)
-- WIDTH: 8192 - The width of all hidden layers
-- GAMMA: 1.0 - A rescaling factor: outputs->outputs/gamma, `lr->lr*gamma**(2.0) (gamma<1) or lr->lr*gamma (gamma>1)`
-- DEVICES: [0] - The device IDs for any used GPUs
-- SEED: 42 - Base set seed of all RNG forms; on different devices, the seed is (SEED+DEVICE_ID)
-- LOSS_CHECKPOINTS: [0.15, 0.1] - The thresholds at which the trainloop will exit
-- EMA_SMOOTHER: 0.9 - Exponential moving average constant of loss values
-- DETERMINSITIC: True - If True, the set seed will be used; False turns this off
-- VERBOSE: False - If True, will display the loss at each timestep
+- ONLINE: True
+    Sets if training is done with one set batch or with a variable training batch
+- N_SAMPLES: 1024
+    Number of samples that get used throughout training (the batch size if ONLINE is True)
+- N_TRIAN: 4000 
+    Along with N_TEST, is used only to define the total number of samples that exist for your data
+- N_TEST: 10_000 
+    Testset size (testset is defined once and is based off the batch function)
+    Note: if you want a specific testset, set it through global_config["X_te"] and global_config["y_te"]
+- ONLYTHRESHOLDS: True 
+    If True, the results will only be from the trained network instead of the full run
+- NUM_TRIALS: 1 
+    Number of trials
+- MAX_ITER: int(1e5)
+    Maximum number of gradient steps the network will take
+- LR: 1e-2
+    The base learning rate (to be rescaled in the muP setting)
+- DEPTH: 2
+    The number of hidden layers of the network (must be > 0)
+- WIDTH: 8192
+    The width of all hidden layers
+- GAMMA: 1.0
+    A rescaling factor: outputs->outputs/gamma, `lr->lr*gamma**(2.0) (gamma<1) or lr->lr*gamma (gamma>1)`
+- DEVICES: [0]
+    The device IDs for any used GPUs
+- SEED: 42
+    Base set seed of all RNG forms; on different devices, the seed is (SEED+DEVICE_ID)
+- LOSS_CHECKPOINTS: [0.15, 0.1]
+    The thresholds at which the trainloop will exit
+- EMA_SMOOTHER: 0.9
+    Exponential moving average constant of loss values
+- DETERMINSITIC: True
+    If True, the set seed will be used; False turns this off
+- VERBOSE: False
+    If True, will display the loss at each timestep
