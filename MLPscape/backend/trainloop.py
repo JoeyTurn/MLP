@@ -136,7 +136,7 @@ def train_MLP(model, batch_function, lr=1e-2, max_iter=int(1e3), loss_checkpoint
             if not(only_thresholds):
                 if otherreturns is not None:
                     for name, fn in items:
-                        val = np.array(fn(model=model.model, X_tr=X_tr, y_tr=y_tr, X_te=X_te, y_te=y_te, **kwargs)) #the model.model to unwrap from centeredMLP
+                        val = np.array(fn(model=model.model, X_tr=X_tr, y_tr=y_tr, X_te=X_te, y_te=y_te, opt=opt, **kwargs)) #the model.model to unwrap from centeredMLP
                         shape = (max_iter,) + val.shape
                         extras[name] = np.empty(shape, dtype=val.dtype)
                         # extras[name][:]= val
@@ -149,7 +149,7 @@ def train_MLP(model, batch_function, lr=1e-2, max_iter=int(1e3), loss_checkpoint
             te_losses[i] = ema_te
             if otherreturns is not None:
                 for name, fn in items:
-                    val = fn(model=model.model, X_tr=X_tr, y_tr=y_tr, X_te=X_te, y_te=y_te, **kwargs) #the model.model to unwrap from centeredMLP
+                    val = fn(model=model.model, X_tr=X_tr, y_tr=y_tr, X_te=X_te, y_te=y_te, opt=opt, **kwargs) #the model.model to unwrap from centeredMLP
                     extras[name][i] = val
                     
         if verbose:
@@ -166,7 +166,7 @@ def train_MLP(model, batch_function, lr=1e-2, max_iter=int(1e3), loss_checkpoint
         if pointer == len(thresholds):
             if otherreturns is not None and only_thresholds:
                 for name, fn in items:
-                    val = fn(model=model.model, X_tr=X_tr, y_tr=y_tr, X_te=X_te, y_te=y_te, **kwargs)
+                    val = fn(model=model.model, X_tr=X_tr, y_tr=y_tr, X_te=X_te, y_te=y_te, opt=opt, **kwargs)
                     extras[name] = val
             return return_statement(model, ema_tr, ema_te, timekeys, tr_losses, te_losses, extras)
 
@@ -174,6 +174,6 @@ def train_MLP(model, batch_function, lr=1e-2, max_iter=int(1e3), loss_checkpoint
     if i == max_iter - 1:
         if otherreturns is not None and only_thresholds:
             for name, fn in items:
-                val = fn(model=model.model, X_tr=X_tr, y_tr=y_tr, X_te=X_te, y_te=y_te, **kwargs)
+                val = fn(model=model.model, X_tr=X_tr, y_tr=y_tr, X_te=X_te, y_te=y_te, opt=opt, **kwargs)
                 extras[name] = val
     return return_statement(model, ema_tr, ema_te, timekeys, tr_losses, te_losses, extras)
