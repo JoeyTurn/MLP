@@ -31,8 +31,12 @@ def run_job(device_id, job, global_config, bfn_config, iterator_names, **kwargs)
     global_config: anything read-only you want to avoid capturing from globals
     bfn: batch function
     """
-    torch.cuda.set_device(device_id)
-    device = torch.device(f"cuda:{device_id}")
+    use_cuda = torch.cuda.is_available()
+    if use_cuda:
+        torch.cuda.set_device(device_id)
+        device = torch.device(f"cuda:{device_id}")
+    else:
+        device = torch.device("cpu")
 
     base_seed = global_config.get("SEED", None)
     job_seed  = derive_seed(base_seed, device_id)
@@ -54,8 +58,8 @@ def run_job(device_id, job, global_config, bfn_config, iterator_names, **kwargs)
     bfn_iter_args, _ = _extract_kwargs_for(base_bfn, iter_spec)
     
     if global_config.get("X_te", None) is not None and global_config.get("y_te", None) is not None:
-        X_te = ensure_torch(global_config["X_te"])
-        y_te = ensure_torch(global_config["y_te"])
+        X_te = ensure_torch(global_config["X_te"], device=device)
+        y_te = ensure_torch(global_config["y_te"], device=device)
     else:
         X_te, y_te = make_bfn(n=global_config["N_TEST"], X=None, y=None, **bfn_iter_args)(0)
     X_tr, y_tr = make_bfn(job[0], X=None, y=None, **bfn_iter_args)(job[1]) if not global_config["ONLINE"] else None, None
@@ -87,7 +91,8 @@ def run_job(device_id, job, global_config, bfn_config, iterator_names, **kwargs)
     otherouts = [outdict[k] for k in global_config.get("otherreturns", {}).keys()]
     # Cleanup GPU memory
     del model, X_tr, y_tr, X_te, y_te, outdict
-    torch.cuda.empty_cache()
+    if use_cuda:
+        torch.cuda.empty_cache()
     gc.collect()
 
     return (job, timekeys, train_losses, test_losses, *otherouts)

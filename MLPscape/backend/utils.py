@@ -103,7 +103,13 @@ def seed_everything(seed_int, device_id=0, make_generators=True, deterministic=F
     if deterministic:
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
-    return (torch.Generator(device=f"cuda:{device_id}").manual_seed(seed_int), np.random.default_rng(seed_int)) if make_generators else None
+    if not make_generators:
+        return None
+    if torch.cuda.is_available():
+        gen = torch.Generator(device=f"cuda:{device_id}").manual_seed(seed_int)
+    else:
+        gen = torch.Generator(device="cpu").manual_seed(seed_int)
+    return gen, np.random.default_rng(seed_int)
 
 
 def load_json(path):

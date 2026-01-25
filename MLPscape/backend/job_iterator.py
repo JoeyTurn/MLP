@@ -89,6 +89,10 @@ def main(iterators, iterator_names=None, global_config=None, bfn_config=None,
         start_method = mp.get_start_method(allow_none=True)
         use_mp = (start_method == "spawn")
 
+    if use_mp and torch.cuda.device_count() == 0:
+        print("[WARN] No CUDA devices detected; falling back to single-process CPU.")
+        use_mp = False
+
     bfn_config = normalize_bfn_config(bfn_config, use_mp=use_mp)
     done = 0
 

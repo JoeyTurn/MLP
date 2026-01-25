@@ -3,10 +3,12 @@ from MLPscape.backend.utils import tuple_to_numpy
 from MLPscape.backend.job import run_job
 
 def worker(device_id, job_queue, result_queue, global_config, bfn_config, iterator_names=None):
-    try: torch.cuda.set_device(device_id)
-    except Exception as e:
-        result_queue.put(("bootstrap_err", repr(e)))
-        return
+    if torch.cuda.is_available():
+        try:
+            torch.cuda.set_device(device_id)
+        except Exception as e:
+            result_queue.put(("bootstrap_err", repr(e)))
+            return
 
     while True:
         job = job_queue.get()

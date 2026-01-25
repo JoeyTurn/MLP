@@ -33,7 +33,6 @@ def parse_args():
     p.add_argument("--ONLINE", type=bool, default=True, help="Whether to use online training (full dataset at once) or fixed dataset.")
     p.add_argument("--N_TRAIN", type=int_from_any, default=4000, help="Number of training samples.")
     p.add_argument("--N_TEST", type=int_from_any, default=10_000, help="Number of test samples.")
-    p.add_argument("--DATASET", type=str, default="synthetic", help="Dataset to use, currently: synthetic (gaussian) or cifar10.")
     p.add_argument("--ONLYTHRESHOLDS", type=str2bool, default=True, help="If True, only record last loss instead of full curve.")
     p.add_argument("--N_SAMPLES", nargs="+", type=int, default=[1024], help="Number of samples.")
     p.add_argument("--NUM_TRIALS", type=int_from_any, default=1, help="Number of independent trials.")
@@ -62,9 +61,9 @@ def base_args():
     "ONLYTHRESHOLDS": True,
     "N_SAMPLES": [1024],
     "NUM_TRIALS": 1,
-    "MAX_ITER": int(1e5),
+    "MAX_ITER": int(1e4),
     "LR": 1e-2,
-    "depth": 2,
+    "depth": 1,
     "width": 8192,
     "GAMMA": 1.0,
     "DEVICES": [0],

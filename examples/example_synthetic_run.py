@@ -68,11 +68,11 @@ if __name__ == "__main__":
     iterator_names = ["ntrain", "trial", "monomials"]
     
     datapath = os.getenv("DATASETPATH") #datapath = os.path.join(os.getenv(...))
-    exptpath = os.getenv("EXPTPATH") #same here
+    exptpath = os.getenv("RESULTPATH") #same here
     if datapath is None:
         raise ValueError("must set $DATASETPATH environment variable")
     if exptpath is None:
-        raise ValueError("must set $EXPTPATH environment variable")
+        raise ValueError("must set $RESULTPATH environment variable")
     expt_dir = os.path.join(exptpath, "example_folder", "example_mlp_run", "synthetic")
 
     if not os.path.exists(expt_dir):
